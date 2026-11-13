@@ -1,0 +1,21 @@
+ENTRE CERROS Y BALAS · STORYLINE 3D (versión celular)
+Mismo estilo visual que «Jujuy Mapa 3D»: paneles de vidrio oscuro, acentos teal e Inter.
+
+Contenido
+  index.html               la página (no necesita compilación ni dependencias)
+  assets/paisaje.jpg       ilustración de la Quebrada (de la presentación)
+  assets/profundidad.png   mapa de profundidad para el efecto 3D
+  assets/portada.jpg       portada de la presentación
+
+Probarla en la computadora
+  Abrir una terminal en esta carpeta y ejecutar:  python -m http.server 8000
+  Luego entrar a http://localhost:8000  (abrir index.html con doble clic no carga el 3D)
+
+Publicarla en Vercel como proyecto nuevo
+  Opción A (GitHub): subir esta carpeta a un repositorio nuevo → Vercel → Add New → Project →
+           Import → Framework Preset: Other, Build Command y Output Directory vacíos → Deploy.
+  Opción B (terminal): dentro de esta carpeta ejecutar  npx vercel  y luego  npx vercel --prod
+
+Enlaces directos a cada capítulo: /#historia-1 … /#historia-11
+Navegación: botones Anterior/Siguiente, deslizar a los costados (celular) o flechas ← → (computadora).
+El botón «Mapa 3D» lleva a https://contar-con-datos-eight.vercel.app/

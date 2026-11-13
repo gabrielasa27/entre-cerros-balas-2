@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07111d">
+<title>Entre Cerros y Balas</title>
+<meta name="description" content="Storyline inmersiva en 3D de Entre Cerros y Balas, aventura histórica en realidad virtual. Jujuy, 1817.">
+<meta property="og:title" content="Entre Cerros y Balas">
+<meta property="og:description" content="Aventura histórica en realidad virtual · Quebrada de Humahuaca, Jujuy">
+<meta property="og:image" content="assets/portada.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+/* Mismo sistema visual que «Jujuy Mapa 3D» (contar-con-datos): fondo #050d17, paneles de vidrio oscuro, acentos teal, Inter. */
+:root{
+  --fondo:#050d17;
+  --vidrio:rgba(7,17,29,.86);
+  --borde:rgba(255,255,255,.12);
+  --borde-suave:rgba(255,255,255,.10);
+  --texto:#ffffff;
+  --texto-2:#cbd5e1;   /* slate-300 */
+  --texto-3:#94a3b8;   /* slate-400 */
+  --texto-4:#64748b;   /* slate-500 */
+  --teal:#5eead4;      /* teal-300 */
+  --teal-2:#2dd4bf;    /* teal-400 */
+  --teal-claro:#99f6e4;/* teal-200 */
+  --teal-tinta:#04141c;
+  --ambar:#f59e0b;
+  --ambar-claro:#fcd34d;
+  --rojo:#dc2626;
+  --azul:#2563eb;
+  --f:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --ease:cubic-bezier(.2,.8,.2,1);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;background:var(--fondo);color:var(--texto);font-family:var(--f);-webkit-font-smoothing:antialiased;overflow:hidden;overscroll-behavior:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+button:focus-visible,a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+svg{display:block}
+.ic{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;background:var(--fondo);touch-action:none}
+.nogl #gl{display:none}
+.nogl body{background:var(--fondo) url(assets/paisaje.jpg) 50% 60%/cover no-repeat}
+.velo{position:fixed;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(5,13,23,.55) 0,rgba(5,13,23,0) 22%,rgba(5,13,23,0) 60%,rgba(5,13,23,.55) 100%)}
+
+.vidrio{background:var(--vidrio);border:1px solid var(--borde);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+
+/* encabezado como el del mapa */
+.cabecera{position:fixed;z-index:10;top:calc(env(safe-area-inset-top,0px) + 12px);left:max(12px,env(safe-area-inset-left,0px));
+  display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:12px;font-weight:800;letter-spacing:.03em;font-size:14px}
+.cabecera .ic{width:20px;height:20px;color:var(--teal)}
+.cabecera b{color:var(--teal);font-weight:800}
+.mapa-link{position:fixed;z-index:10;top:calc(env(safe-area-inset-top,0px) + 12px);right:max(12px,env(safe-area-inset-right,0px));
+  display:flex;align-items:center;gap:6px;padding:9px 12px;border-radius:12px;font-size:12px;font-weight:700;color:var(--texto);text-decoration:none}
+.mapa-link .ic{color:var(--ambar)}
+.mapa-link:hover{border-color:rgba(94,234,212,.6)}
+
+/* etiquetas sobre el paisaje (como los marcadores del mapa) */
+.marca{position:fixed;z-index:4;left:0;top:0;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:4px;
+  transform:translate(-50%,-100%);transition:opacity .5s;opacity:0}
+.marca.on{opacity:1}
+.marca__txt{display:flex;flex-direction:column;align-items:center;padding:5px 9px;border-radius:8px;background:rgba(7,17,29,.88);border:1px solid rgba(255,255,255,.14);white-space:nowrap;line-height:1.2}
+.marca__txt b{font-size:11px}
+.marca__txt small{font-size:9.5px;color:var(--texto-3)}
+.marca__punto{width:10px;height:10px;border-radius:50%;border:2px solid #fff;background:var(--teal)}
+.marca[data-tipo="jinetes"] .marca__punto{display:none}
+.par{display:flex;gap:3px;padding:5px 6px;border-radius:999px;background:rgba(7,17,29,.9);border:1px solid rgba(253,230,138,.7);animation:pulso 1.8s ease-out infinite}
+.par i{width:10px;height:10px;border-radius:50%;border:1.5px solid #fff;transition:transform .3s,box-shadow .3s}
+.par i.r{background:var(--rojo)} .par i.a{background:var(--azul)}
+.marca[data-foco="rojo"] .par i.r,.marca[data-foco="azul"] .par i.a{transform:scale(1.45);box-shadow:0 0 10px 2px rgba(255,255,255,.7)}
+.marca[data-tipo="jinetes"] .marca__txt{order:2;background:none;border:0;padding:0}
+.marca[data-tipo="jinetes"] .marca__txt b{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#fde68a;text-shadow:0 0 3px #020617,0 0 6px #020617}
+@keyframes pulso{0%{box-shadow:0 0 0 0 rgba(245,158,11,.55)}100%{box-shadow:0 0 0 16px rgba(245,158,11,0)}}
+
+/* panel de la historia (igual que en el mapa) */
+.panel{position:fixed;z-index:20;left:max(8px,env(safe-area-inset-left,0px));right:max(8px,env(safe-area-inset-right,0px));
+  bottom:calc(env(safe-area-inset-bottom,0px) + 8px);height:50vh;height:50svh;border-radius:16px;display:flex;flex-direction:column;overflow:hidden}
+.panel__top{padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:11px;letter-spacing:.04em}
+.panel__top .t{font-weight:700;text-transform:uppercase;color:var(--teal);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.panel__top .n{color:var(--texto-3);font-variant-numeric:tabular-nums}
+.segs{padding:0 16px;display:flex;gap:4px}
+.segs button{height:4px;flex:1;border-radius:999px;background:rgba(255,255,255,.15);transition:background .3s}
+.segs button.on{background:var(--teal)}
+.panel__body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:12px 16px 16px;-webkit-overflow-scrolling:touch}
+.cap{display:flex;flex-direction:column;gap:12px}
+.cap.entra{animation:entra .55s var(--ease) both}
+@keyframes entra{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.kicker{margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--teal)}
+.cap h1,.cap h2{margin:0;font-size:24px;line-height:1.15;font-weight:700;text-wrap:balance}
+.cap h1{font-size:28px;font-weight:800}
+.lugar{margin:4px 0 0;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--texto-3)}
+.lugar .ic{width:14px;height:14px;color:var(--ambar)}
+.destacado{margin:0;font-size:15px;font-weight:600;color:#ccfbf1}
+.cap p.txt{margin:0;font-size:14px;line-height:1.6;color:var(--texto-2)}
+.vinetas{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:14px;line-height:1.45;color:var(--texto-2)}
+.vinetas li{display:flex;gap:8px}
+.vinetas li::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:var(--ambar);margin-top:.5em}
+.tarjeta{border:1px solid var(--borde);background:rgba(255,255,255,.03);border-radius:10px;padding:12px}
+.tarjeta h3{margin:0;font-size:15px;font-weight:700;color:var(--teal-claro)}
+.tarjeta p{margin:6px 0 0;font-size:13px;line-height:1.55;color:var(--texto-2)}
+.pregunta{margin:0;font-size:20px;font-weight:700;color:var(--ambar-claro)}
+.credito{margin:0;font-size:12px;color:var(--texto-3)}
+.portada{display:block;width:100%;aspect-ratio:16/9;border-radius:10px;overflow:hidden;border:1px solid var(--borde);background:#0b1a2a}
+.portada img{width:100%;height:100%;object-fit:cover;display:block}
+.contacto{display:grid;gap:8px}
+.contacto a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--borde);background:rgba(255,255,255,.03);color:var(--texto);text-decoration:none;font-size:14px;min-height:44px;word-break:break-all}
+.contacto a .ic{color:var(--teal)}
+.contacto a:hover{border-color:rgba(94,234,212,.6)}
+.contacto small{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-3)}
+.panel__nav{padding:10px 12px;border-top:1px solid var(--borde-suave);display:flex;align-items:center;gap:8px}
+.btn{display:flex;align-items:center;gap:4px;padding:10px 12px;border-radius:10px;font-size:12px;min-height:40px}
+.btn--sec{border:1px solid rgba(255,255,255,.15);color:var(--texto-2)}
+.btn--sec:hover{background:rgba(255,255,255,.05)}
+.btn--sec:disabled{opacity:.3;cursor:default}
+.btn--pri{background:var(--teal-2);color:var(--teal-tinta);font-weight:700;padding-inline:16px}
+.btn--pri:hover{background:var(--teal)}
+.btn .ic{width:16px;height:16px}
+.ayuda{flex:1;text-align:center;font-size:10px;color:var(--texto-4)}
+
+/* intro */
+.intro{position:fixed;z-index:30;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:14px;
+  padding:24px max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 28px) max(16px,env(safe-area-inset-left,0px));
+  background:linear-gradient(180deg,rgba(5,13,23,0) 30%,rgba(5,13,23,.92) 78%);transition:opacity .7s var(--ease),visibility .7s}
+.intro.fuera{opacity:0;visibility:hidden}
+.intro__chip{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);padding:6px 10px;border-radius:999px}
+.intro h1{margin:0;font-size:clamp(36px,11vw,64px);line-height:1;font-weight:800;text-align:center;letter-spacing:-.02em;text-wrap:balance}
+.intro p{margin:0;color:var(--texto-2);text-align:center;font-size:15px}
+.intro .btn--pri{font-size:14px;padding:14px 22px;min-height:48px}
+.intro .credito{text-align:center}
+
+@media (min-width:768px){
+  .panel{left:16px;right:auto;top:calc(env(safe-area-inset-top,0px) + 72px);bottom:16px;height:auto;width:390px;border-radius:12px}
+  .ayuda-m{display:none}
+  .intro{justify-content:center;background:radial-gradient(ellipse at 50% 60%,rgba(5,13,23,.35),rgba(5,13,23,.88))}
+}
+@media (max-width:767px){.ayuda-d{display:none}}
+@media (prefers-reduced-motion:reduce){.cap.entra,.par{animation:none}.intro{transition:none}}
+</style>
+</head>
+<body>
+<canvas id="gl" aria-hidden="true"></canvas>
+<div class="velo" aria-hidden="true"></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-mtn" viewBox="0 0 24 24"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></symbol>
+  <symbol id="i-izq" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-der" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-mapa" viewBox="0 0 24 24"><path d="M3 6v15l6-3 6 3 6-3V3l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></symbol>
+  <symbol id="i-tel" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></symbol>
+</svg>
+
+<header class="cabecera vidrio"><svg class="ic"><use href="#i-mtn"/></svg><span>ENTRE CERROS <b>Y BALAS</b></span></header>
+<a class="mapa-link vidrio" href="https://contar-con-datos-eight.vercel.app/" target="_blank" rel="noopener"><svg class="ic"><use href="#i-mapa"/></svg>Mapa 3D</a>
+
+<div class="marca" id="m-jinetes" data-tipo="jinetes"><span class="par"><i class="r"></i><i class="a"></i></span><span class="marca__txt"><b>Mensajeros</b></span></div>
+
+<section class="intro" id="intro" aria-label="Portada">
+  <span class="intro__chip vidrio">Aventura histórica en realidad virtual</span>
+  <h1>Entre Cerros y Balas</h1>
+  <p>Jujuy, 1817 · Quebrada de Humahuaca</p>
+  <button class="btn btn--pri" id="comenzar">Comenzar la historia <svg class="ic"><use href="#i-der"/></svg></button>
+  <p class="credito">César Ochoa · Laboratorio XR</p>
+</section>
+
+<section class="panel vidrio" id="panel" aria-label="Historia: Entre Cerros y Balas" hidden>
+  <div class="panel__top"><span class="t">Historia · Entre Cerros y Balas</span><span class="n" id="num" aria-live="polite">1/11</span></div>
+  <div class="segs" id="segs" aria-hidden="true"></div>
+  <div class="panel__body" id="cuerpo"></div>
+  <div class="panel__nav">
+    <button class="btn btn--sec" id="ant"><svg class="ic"><use href="#i-izq"/></svg>Anterior</button>
+    <span class="ayuda"><span class="ayuda-m">Deslizá para cambiar</span><span class="ayuda-d">← → para navegar</span></span>
+    <button class="btn btn--pri" id="sig">Siguiente <svg class="ic"><use href="#i-der"/></svg></button>
+  </div>
+</section>
+
+<script>
+(function(){
+"use strict";
+var root=document.documentElement;
+var reducir=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------------- Capítulos (textos de la presentación) ----------------
+   cam: u,v = punto del paisaje a mostrar (0..1, v desde arriba), z = alto visible (0..1)
+   spot: jinete destacado, tinte: calidez, sombra: oscurecimiento (amenaza) */
+var ROJO=[.472,.80], AZUL=[.535,.80];
+var C=[
+ {id:"portada",kicker:"Aventura histórica en realidad virtual",h1:"Entre Cerros y Balas",lugar:"Quebrada de Humahuaca, Jujuy",portada:true,credito:"César Ochoa · Laboratorio XR",
+  cam:{u:.50,v:.62,z:.96},tinte:.04},
+ {id:"contexto",kicker:"Contexto histórico",h:"Jujuy, 1817",lugar:"Norte argentino",txt:["Las tropas realistas avanzan sobre el norte argentino. Las milicias gauchas resisten y defienden el territorio."],
+  cam:{u:.24,v:.55,z:.92}},
+ {id:"protagonistas",h:"Protagonistas de la historia",lugar:"Humahuaca · cuartel realista",tarjetas:[
+   {t:"Manuel Eduardo Arias",l:["Comandante de las milicias gauchas en Jujuy.","El 1 de marzo de 1817 encabezó la toma del cuartel realista de Humahuaca."]},
+   {t:"Martín Miguel de Güemes",l:["Referente de la defensa del norte.","La comunicación entre las fuerzas patriotas resulta central para la misión ficticia del videojuego."]}],
+  cam:{u:.50,v:.66,z:.80},tinte:.06},
+ {id:"mision",kicker:"Aventura ficticia inspirada en 1817",h:"La misión",lugar:"Quebrada de Humahuaca",destacado:"Un mensaje debe llegar a Güemes.",
+  txt:["Dos gauchos mensajeros vinculados con las tropas de Arias atraviesan la Quebrada de Humahuaca.","En el camino, una emboscada realista amenaza con detenerlos."],
+  cam:{u:.60,v:.66,z:.70},tinte:.22,sombra:.14,jinetes:true},
+ {id:"jugadores",h:"Dos jugadores. Dos caballos.",lugar:"El camino de los mensajeros",destacado:"Un mismo objetivo: atravesar el recorrido y cumplir la misión.",
+  txt:["Cada jugador monta su propio caballo. Sus habilidades son diferentes y complementarias."],
+  cam:{u:.505,v:.84,z:.60},tinte:.08,jinetes:true},
+ {id:"jugador-1",kicker:"Ritmo · Precisión · Recursos",h:"Jugador 1 · El recorrido",lugar:"Jinete de poncho rojo",
+  vinetas:["Mantiene el ritmo del galope.","Esquiva piedras y otros obstáculos.","Recoge recursos para seguir avanzando."],
+  cam:{u:ROJO[0],v:.85,z:.52},spot:ROJO,tinte:.10,jinetes:true,foco:"rojo"},
+ {id:"jugador-2",kicker:"Atención · Reflejos · Protección",h:"Jugador 2 · La defensa",lugar:"Jinete de poncho azul",
+  vinetas:["Identifica amenazas a lo largo del camino.","Enfrenta los ataques de las tropas realistas.","Protege a su compañero."],
+  cam:{u:AZUL[0],v:.85,z:.52},spot:AZUL,tinte:.04,sombra:.16,jinetes:true,foco:"azul"},
+ {id:"estrategia",h:"Estrategia, táctica y cooperación",lugar:"Cerros de colores",tarjetas:[
+   {t:"Estrategia",l:["Administrar los recursos y tomar decisiones para cumplir la misión."]},
+   {t:"Táctica",l:["Aprovechar el terreno, esquivar obstáculos y responder a las amenazas."]},
+   {t:"Cooperación",l:["Coordinar habilidades distintas para protegerse y avanzar juntos."]}],
+  cam:{u:.78,v:.62,z:.88},tinte:.05},
+ {id:"territorio",kicker:"Inspirado en hechos históricos",h:"El territorio también es parte del desafío",lugar:"Cordones de la Quebrada",
+  txt:["Los cerros y caminos de la Quebrada de Humahuaca inspiran el recorrido del videojuego.","Las milicias gauchas aprovecharon el conocimiento del terreno, los ataques sorpresivos y la interrupción del abastecimiento enemigo."],
+  cam:{u:.70,v:.52,z:.60},tinte:.12},
+ {id:"aventura",h:"Una aventura para descubrir Jujuy",lugar:"Patrimonio de la Quebrada",destacado:"La experiencia busca despertar interés por:",
+  vinetas:["La historia de la independencia en Jujuy.","Manuel Eduardo Arias y Martín Miguel de Güemes.","El patrimonio y los paisajes de la Quebrada."],
+  tarjetas:[{t:"En desarrollo",l:["Videojuego cooperativo de realidad virtual.","Herramienta de desarrollo: Unreal Engine.","Desarrollador: César Ochoa.","Laboratorio XR."]}],
+  cam:{u:.28,v:.60,z:.90},tinte:.06},
+ {id:"cierre",h:"Entre Cerros y Balas",lugar:"Jujuy, 1817",destacado:"La historia de Jujuy se convierte en una aventura.",pregunta:"¿Podrás entregar el mensaje?",
+  credito:"Cesar Ochoa – Laboratorio XR",contacto:true,
+  cam:{u:.50,v:.66,z:.96},tinte:.26,jinetes:true}
+];
+var N=C.length;
+
+/* ---------------- Panel ---------------- */
+var panel=document.getElementById("panel"),cuerpo=document.getElementById("cuerpo"),num=document.getElementById("num");
+var segs=document.getElementById("segs"),ant=document.getElementById("ant"),sig=document.getElementById("sig");
+var intro=document.getElementById("intro");
+for(var i=0;i<N;i++){(function(k){var b=document.createElement("button");b.tabIndex=-1;b.onclick=function(){ir(k)};segs.appendChild(b);})(i);}
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
+function icono(id){var s=document.createElementNS("http://www.w3.org/2000/svg","svg");s.setAttribute("class","ic");var u=document.createElementNS("http://www.w3.org/2000/svg","use");u.setAttribute("href","#"+id);s.appendChild(u);return s;}
+
+function render(c,k){
+  var d=el("div","cap"+(reducir?"":" entra"));
+  if(c.kicker) d.appendChild(el("p","kicker",c.kicker));
+  var t=el("div"); t.appendChild(el(c.h1?"h1":"h2",null,c.h1||c.h));
+  if(c.lugar){var l=el("p","lugar");l.appendChild(icono("i-pin"));l.appendChild(document.createTextNode(c.lugar));t.appendChild(l);}
+  d.appendChild(t);
+  if(c.portada){var f=el("figure","portada");f.style.margin="0";var im=new Image();im.src="assets/portada.jpg";im.alt="Portada de Entre Cerros y Balas: dos jinetes cabalgan hacia un pueblo entre cerros de colores.";f.appendChild(im);d.appendChild(f);}
+  if(c.destacado) d.appendChild(el("p","destacado",c.destacado));
+  (c.txt||[]).forEach(function(p){d.appendChild(el("p","txt",p));});
+  if(c.vinetas){var ul=el("ul","vinetas");c.vinetas.forEach(function(v){ul.appendChild(el("li",null,v));});d.appendChild(ul);}
+  (c.tarjetas||[]).forEach(function(tj){var b=el("div","tarjeta");b.appendChild(el("h3",null,tj.t));tj.l.forEach(function(x){b.appendChild(el("p",null,x));});d.appendChild(b);});
+  if(c.pregunta) d.appendChild(el("p","pregunta",c.pregunta));
+  if(c.contacto){
+    var ct=el("div","contacto");
+    var a1=el("a");a1.href="tel:+541126688042";a1.appendChild(icono("i-tel"));var s1=el("span");s1.appendChild(el("small",null,"Celular"));s1.appendChild(document.createTextNode("11 2668-8042"));a1.appendChild(s1);
+    var a2=el("a");a2.href="mailto:cio.4422.ochoa@gmail.com";a2.appendChild(icono("i-mail"));var s2=el("span");s2.appendChild(el("small",null,"Email"));s2.appendChild(document.createTextNode("cio.4422.ochoa@gmail.com"));a2.appendChild(s2);
+    ct.appendChild(a1);ct.appendChild(a2);d.appendChild(ct);
+  }
+  if(c.credito) d.appendChild(el("p","credito",c.credito));
+  return d;
+}
+
+var idx=-1;
+function ir(k,sinVuelo){
+  k=Math.max(0,Math.min(N-1,k)); if(k===idx) return;
+  idx=k; var c=C[k];
+  cuerpo.replaceChildren(render(c,k)); cuerpo.scrollTop=0;
+  num.textContent=(k+1)+"/"+N;
+  [].forEach.call(segs.children,function(b,j){b.classList.toggle("on",j<=k);});
+  ant.disabled=k===0;
+  sig.replaceChildren(); if(k===N-1){sig.appendChild(document.createTextNode("Volver al inicio"));}else{sig.appendChild(document.createTextNode("Siguiente "));sig.appendChild(icono("i-der"));}
+  var h="#historia-"+(k+1); if(location.hash!==h) history.replaceState(null,"",h);
+  volar(c,sinVuelo);
+  var p=C[k+1]; if(p&&p.portada){var im=new Image();im.src="assets/portada.jpg";}
+}
+function empezar(k){intro.classList.add("fuera");panel.hidden=false;ir(k||0);setTimeout(function(){sig.focus({preventScroll:true});},50);}
+document.getElementById("comenzar").onclick=function(){empezar(0);};
+ant.onclick=function(){ir(idx-1);};
+sig.onclick=function(){ if(idx===N-1){ idx=-1; panel.hidden=true; intro.classList.remove("fuera"); history.replaceState(null,"",location.pathname+location.search); volar(C[0]); } else ir(idx+1); };
+window.addEventListener("keydown",function(e){
+  if(panel.hidden){ if(e.key==="Enter"||e.key==="ArrowRight") empezar(0); return; }
+  if(e.key==="ArrowRight") ir(idx+1); else if(e.key==="ArrowLeft") ir(idx-1);
+});
+/* deslizar a los costados (panel o paisaje) */
+var t0=null;
+document.addEventListener("touchstart",function(e){var t=e.touches[0];t0={x:t.clientX,y:t.clientY};},{passive:true});
+document.addEventListener("touchend",function(e){
+  if(!t0||panel.hidden) return; var t=e.changedTouches[0],dx=t.clientX-t0.x,dy=t.clientY-t0.y; t0=null;
+  if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.4) ir(idx+(dx<0?1:-1));
+},{passive:true});
+window.addEventListener("hashchange",function(){var m=/^#historia-(\d+)$/.exec(location.hash);if(m){if(panel.hidden)empezar(+m[1]-1);else ir(+m[1]-1);}});
+
+/* ---------------- Cámara (vuelo entre capítulos) ---------------- */
+function E(c){return {u:c.cam.u,v:c.cam.v,z:c.cam.z,sx:(c.spot||[.5,.8])[0],sy:(c.spot||[.5,.8])[1],sk:c.spot?1:0,w:c.tinte||0,k:c.sombra||0};}
+var cam=E(C[0]),desde=E(C[0]),hacia=E(C[0]),tVuelo=0,dur=1,pico=0;
+function volar(c,inmediato){
+  desde=JSON.parse(JSON.stringify(cam)); hacia=E(c); tVuelo=performance.now();
+  var dist=Math.hypot(hacia.u-desde.u,hacia.v-desde.v);
+  dur=(reducir||inmediato)?1:1900+dist*2600; pico=Math.min(.22,dist*.55);   // como flyTo: se aleja y vuelve a acercarse
+  var j=document.getElementById("m-jinetes"); j.classList.toggle("on",!!c.jinetes); j.dataset.foco=c.foco||"";
+}
+function suave(x){return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;}
+function paso(now){
+  var k=Math.min(1,(now-tVuelo)/dur),e=suave(k);
+  for(var key in hacia) cam[key]=desde[key]+(hacia[key]-desde[key])*e;
+  cam.z=Math.min(.97,cam.z+pico*Math.sin(Math.PI*k));
+}
+
+/* ---------------- WebGL: paisaje con profundidad ---------------- */
+var cv=document.getElementById("gl"),gl=null;
+try{gl=cv.getContext("webgl",{antialias:false,alpha:false})||cv.getContext("experimental-webgl");}catch(e){}
+var jin=document.getElementById("m-jinetes");
+var IA=1920/1080,W=0,H=0,dpr=1;
+function encuadre(){
+  /* zona libre de la pantalla (fuera del panel) donde se centra el punto de interés */
+  var w=innerWidth,h=innerHeight,movil=w<768,abierto=!panel.hidden;
+  var fx=.5,fy=.5;
+  var hueco=0,izq=0;                       /* parte de la pantalla tapada por el panel */
+  if(abierto&&movil){hueco=1-(panel.getBoundingClientRect().top-8)/h;fy=(1-hueco)/2;}
+  if(!abierto&&movil){hueco=.42;fy=.29;}           /* portada: el título ocupa la parte de abajo */
+  if(abierto&&!movil){fx=(406+(w-406)/2)/w;izq=406/w;}
+  /* z del capítulo = alto de la imagen que entra en la zona libre */
+  var va=w/h,z=cam.z/(1-hueco),zx=z*va/IA,zmax=.97/(1-hueco);
+  if(zx>.97){zx=.97;z=zx*IA/va;} if(z>zmax){z=zmax;zx=z*va/IA;}
+  var cu=cam.u+(.5-fx)*zx, cv2=cam.v+(.5-fy)*z;
+  /* el borde de la imagen puede quedar debajo del panel, nunca en la zona visible */
+  cu=Math.min(1-zx/2-.01,Math.max(zx/2+.01-zx*izq,cu)); cv2=Math.min(1-z/2-.01+z*hueco,Math.max(z/2+.01,cv2));
+  return {cu:cu,cv:cv2,zx:zx,z:z};
+}
+function ubicarJinetes(f){
+  var x=((.503-f.cu)/f.zx+.5)*innerWidth, y=((.735-f.cv)/f.z+.5)*innerHeight;
+  jin.style.transform="translate("+x.toFixed(1)+"px,"+y.toFixed(1)+"px) translate(-50%,-100%)";
+}
+
+var ptr={x:0,y:0},ptrT={x:0,y:0};
+window.addEventListener("pointermove",function(e){ptrT.x=e.clientX/innerWidth-.5;ptrT.y=e.clientY/innerHeight-.5;},{passive:true});
+window.addEventListener("deviceorientation",function(e){if(e.gamma==null)return;ptrT.x=Math.max(-.5,Math.min(.5,e.gamma/40));ptrT.y=Math.max(-.5,Math.min(.5,(e.beta-45)/50));},{passive:true});
+
+if(!gl){
+  root.classList.add("nogl");
+  (function loop(now){paso(now);ubicarJinetes(encuadre());requestAnimationFrame(loop);})(performance.now());
+}else{
+  var VS="attribute vec2 a;varying vec2 s;void main(){s=a*.5+.5;gl_Position=vec4(a,0.,1.);}";
+  var FS=["precision mediump float;varying vec2 s;",
+   "uniform sampler2D T,D;uniform vec2 C,S,O;uniform float F,W,K;uniform vec3 SP;",
+   "void main(){vec2 b=C+(s-.5)*S;vec2 p=b;",
+   " for(int i=0;i<4;i++){float d=texture2D(D,p).r;p=b-O*(d-F);}",
+   " float fuera=max(smoothstep(0.,-.04,b.y),smoothstep(0.,-.04,b.x));",
+   " p=clamp(p,vec2(.001),vec2(.999));vec3 c=texture2D(T,p).rgb;float d=texture2D(D,p).r;",
+   " c=mix(c,c*vec3(1.10,.96,.82)+vec3(.04,0.,-.02),W);",
+   " c*=1.-K*(.55+.45*(1.-d));",
+   " vec2 q=(p-SP.xy)*vec2(1.78,1.);float g=exp(-dot(q,q)/.0016);",
+   " c=mix(c,c*(.70+.6*g)+vec3(.10,.07,.02)*g,SP.z);",
+   " vec2 v=s-.5;c*=1.-dot(v,v)*.6;c=mix(c,vec3(.02,.05,.09),fuera);gl_FragColor=vec4(c,1.);}"].join("\n");
+  var PV=["attribute vec3 a;uniform float TM,F;uniform vec2 O,R;varying float al;",
+   "void main(){float dp=a.z;vec2 v=vec2(.012+.02*dp,.004*sin(TM*.3+a.x*20.));",
+   " vec2 p=fract(a.xy+v*TM*.25);p+=-O*(dp-F)*2.6;p.y+=.02*sin(TM*.6+a.y*30.);",
+   " gl_Position=vec4(p*2.-1.,0.,1.);gl_PointSize=(1.2+dp*3.6)*R.y/700.;al=(.16+.40*dp)*(.6+.4*sin(TM*1.3+a.x*50.));}"].join("\n");
+  var PF="precision mediump float;varying float al;void main(){vec2 c=gl_PointCoord-.5;float r=dot(c,c);if(r>.25)discard;gl_FragColor=vec4(1.,.93,.78,al*(1.-r*4.));}";
+  function sh(t,src){var o=gl.createShader(t);gl.shaderSource(o,src);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(o));return o;}
+  function pr(v,f){var p=gl.createProgram();gl.attachShader(p,sh(gl.VERTEX_SHADER,v));gl.attachShader(p,sh(gl.FRAGMENT_SHADER,f));gl.linkProgram(p);return p;}
+  var P1=pr(VS,FS),P2=pr(PV,PF);
+  var q=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,q);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+  var NP=reducir?0:90,pts=new Float32Array(NP*3);for(var n=0;n<NP;n++){pts[n*3]=Math.random();pts[n*3+1]=Math.random();pts[n*3+2]=Math.pow(Math.random(),1.6);}
+  var pb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,pb);gl.bufferData(gl.ARRAY_BUFFER,pts,gl.STATIC_DRAW);
+  function U(p,n){return gl.getUniformLocation(p,n);}
+  var u1={T:U(P1,"T"),D:U(P1,"D"),C:U(P1,"C"),S:U(P1,"S"),O:U(P1,"O"),F:U(P1,"F"),W:U(P1,"W"),K:U(P1,"K"),SP:U(P1,"SP")},u2={TM:U(P2,"TM"),F:U(P2,"F"),O:U(P2,"O"),R:U(P2,"R")};
+  var listas=0;
+  function tex(unit,src){var t=gl.createTexture(),im=new Image();im.onload=function(){gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,t);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,im);
+    [gl.TEXTURE_MIN_FILTER,gl.TEXTURE_MAG_FILTER].forEach(function(p){gl.texParameteri(gl.TEXTURE_2D,p,gl.LINEAR);});
+    [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T].forEach(function(p){gl.texParameteri(gl.TEXTURE_2D,p,gl.CLAMP_TO_EDGE);});listas++;};
+    im.onerror=function(){root.classList.add("nogl");};im.src=src;}
+  tex(0,"assets/paisaje.jpg");tex(1,"assets/profundidad.png");
+  function resize(){dpr=Math.min(devicePixelRatio||1,2);W=Math.round(innerWidth*dpr);H=Math.round(innerHeight*dpr);if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}}
+  addEventListener("resize",resize);resize();
+  var T0=performance.now();
+  (function frame(now){
+    var tm=(now-T0)/1000; paso(now);
+    ptr.x+=(ptrT.x-ptr.x)*.05; ptr.y+=(ptrT.y-ptr.y)*.05;
+    var f=encuadre(); ubicarJinetes(f);
+    if(listas>=2){
+      var amp=reducir?0:1;
+      var ox=(Math.sin(tm*.45)*.010+ptr.x*.024)*amp*f.zx, oy=(Math.cos(tm*.33)*.006-ptr.y*.012)*amp*f.z;
+      var foco=.25+.6*Math.max(0,Math.min(1,(.97-cam.z)/.57));
+      gl.viewport(0,0,W,H);gl.useProgram(P1);gl.bindBuffer(gl.ARRAY_BUFFER,q);
+      var la=gl.getAttribLocation(P1,"a");gl.enableVertexAttribArray(la);gl.vertexAttribPointer(la,2,gl.FLOAT,false,0,0);
+      gl.uniform1i(u1.T,0);gl.uniform1i(u1.D,1);gl.uniform2f(u1.C,f.cu,1-f.cv);gl.uniform2f(u1.S,f.zx,f.z);gl.uniform2f(u1.O,ox,oy);
+      gl.uniform1f(u1.F,foco);gl.uniform1f(u1.W,cam.w);gl.uniform1f(u1.K,cam.k);gl.uniform3f(u1.SP,cam.sx,1-cam.sy,cam.sk);
+      gl.disable(gl.BLEND);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);gl.disableVertexAttribArray(la);
+      if(NP){gl.useProgram(P2);gl.bindBuffer(gl.ARRAY_BUFFER,pb);var lb=gl.getAttribLocation(P2,"a");gl.enableVertexAttribArray(lb);gl.vertexAttribPointer(lb,3,gl.FLOAT,false,0,0);
+        gl.uniform1f(u2.TM,tm);gl.uniform1f(u2.F,foco);gl.uniform2f(u2.O,ox/f.zx,oy/f.z);gl.uniform2f(u2.R,W,H);
+        gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE);gl.drawArrays(gl.POINTS,0,NP);gl.disableVertexAttribArray(lb);}
+    }
+    requestAnimationFrame(frame);
+  })(performance.now());
+}
+
+/* enlace directo: #historia-5 abre el capítulo 5 */
+var m=/^#historia-(\d+)$/.exec(location.hash);
+if(m) empezar(+m[1]-1); else volar(C[0],true);
+})();
+</script>
+</body>
+</html>
